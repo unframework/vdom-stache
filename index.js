@@ -14,9 +14,19 @@ document.onclick = function () {
 var container = document.createElement('div');
 document.body.appendChild(container);
 
+function cacheHandler() {
+    return function (text, render) {
+        var html = render(text);
+
+        return html;
+    }
+}
+
 function render() {
     container.innerHTML = Mustache.render(template, {
-        clickCount: clickCount
+        clickCount: clickCount,
+
+        cache: cacheHandler
     });
 }
 
