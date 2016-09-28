@@ -7,8 +7,11 @@ document.onclick = function () {
     render();
 };
 
+var container = document.createElement('div');
+document.body.appendChild(container);
+
 function render() {
-    console.log('click count:', clickCount);
+    container.innerHTML = 'click count: ' + clickCount;
 }
 
 render();
