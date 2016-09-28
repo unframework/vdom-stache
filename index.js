@@ -1,4 +1,7 @@
+var fs = require('fs');
 var Mustache = require('mustache');
+
+var template = fs.readFileSync(__dirname + '/index.html.mustache', 'utf8');
 
 var clickCount = 0;
 
@@ -12,7 +15,7 @@ var container = document.createElement('div');
 document.body.appendChild(container);
 
 function render() {
-    container.innerHTML = Mustache.render("click count: {{ clickCount }}", {
+    container.innerHTML = Mustache.render(template, {
         clickCount: clickCount
     });
 }
