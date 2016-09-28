@@ -9,5 +9,6 @@
   "author": "Nick Matantsev <nick.matantsev@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "mustache": "^2.2.1"
   }
 }
