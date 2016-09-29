@@ -4,9 +4,14 @@ var Mustache = require('mustache');
 var template = fs.readFileSync(__dirname + '/index.html.mustache', 'utf8');
 
 var clickCount = 0;
+var changeCount = 0;
 
 document.onclick = function () {
     clickCount += 1;
+
+    if (Math.random() < 0.2) {
+        changeCount += 1;
+    }
 
     render();
 };
@@ -123,6 +128,7 @@ function render() {
 
     var textOutput = Mustache.render(template, {
         clickCount: clickCount,
+        changeCount: changeCount,
 
         cache: cacheHandler
     });
