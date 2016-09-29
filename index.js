@@ -15,58 +15,95 @@ var container = document.createElement('div');
 document.body.appendChild(container);
 
 var domStage = document.createElement('div');
+var domCache = Object.create(null);
 
 function cacheHandler() {
     return function (text, render) {
+        var parentId = this._renderId;
         var parentSnippetList = this._renderSnippetList;
+        var currentId = parentId ? parentId + '/' + parentSnippetList.length : 'root';
         var currentSnippetList = [];
 
         // render template, collecting cacheable child snippets
+        this._renderId = currentId;
         this._renderSnippetList = currentSnippetList;
         var html = render(text);
+        this._renderId = parentId;
         this._renderSnippetList = parentSnippetList;
 
-        // instantiate resulting HTML in a staging area
-        domStage.innerHTML = html;
+        var cacheInfo = domCache[currentId];
 
-        var domSet = Array.apply(null, new Array(domStage.childNodes.length)).map(function (x, index) {
-            return domStage.childNodes[index];
-        });
+        if (!cacheInfo) {
+            cacheInfo = domCache[currentId] = [ '', null ];
+        }
 
-        // unlink staged nodes
-        domStage.innerHTML = '';
+        if (cacheInfo[0] !== html) {
+            console.log('instantiating!', currentId);
 
-        // stitch together resulting DOM by replacing child snippet markers
-        var snippetMarkerNodeList = [];
+            // keep reference to old DOM, if any
+            var oldDomSet = cacheInfo[1];
 
-        domSet.forEach(function (domNode) {
-            var walker = document.createTreeWalker(domNode, NodeFilter.SHOW_COMMENT, {
-                acceptNode: function (node) {
-                    return node.nodeValue === '$cache$' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-                }
-            }, false);
+            // instantiate resulting HTML in a staging area
+            domStage.innerHTML = html;
 
-            while(walker.nextNode()) {
-                snippetMarkerNodeList.push(walker.currentNode);
-            }
-        });
-
-        snippetMarkerNodeList.forEach(function (snippetMarkerNode, index) {
-            currentSnippetList[index].forEach(function (contentNode) {
-                snippetMarkerNode.parentNode.insertBefore(contentNode, snippetMarkerNode);
+            var domSet = Array.apply(null, new Array(domStage.childNodes.length)).map(function (x, index) {
+                return domStage.childNodes[index];
             });
 
-            snippetMarkerNode.parentNode.removeChild(snippetMarkerNode);
-        });
+            // unlink staged nodes
+            domStage.innerHTML = '';
+
+            // ensure we have at least some marker DOM
+            if (domSet.length === 0) {
+                domSet = [ document.createComment('') ];
+            }
+
+            // stitch together resulting DOM by replacing child snippet markers
+            var snippetMarkerNodeList = [];
+
+            domSet.forEach(function (domNode) {
+                var walker = document.createTreeWalker(domNode, NodeFilter.SHOW_COMMENT, {
+                    acceptNode: function (node) {
+                        return node.nodeValue === '$cache$' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                    }
+                }, false);
+
+                while(walker.nextNode()) {
+                    snippetMarkerNodeList.push(walker.currentNode);
+                }
+            });
+
+            snippetMarkerNodeList.forEach(function (snippetMarkerNode, index) {
+                currentSnippetList[index].forEach(function (contentNode) {
+                    snippetMarkerNode.parentNode.insertBefore(contentNode, snippetMarkerNode);
+                });
+            });
+
+            cacheInfo[0] = html;
+            cacheInfo[1] = domSet;
+
+            // replace old DOM if we are part of the tree already
+            if (oldDomSet !== null) {
+                console.log('replacing!', currentId);
+
+                domSet.forEach(function (newContentNode) {
+                    oldDomSet[0].parentNode.insertBefore(newContentNode, oldDomSet[0]);
+                })
+
+                oldDomSet.forEach(function (domNode) {
+                    domNode.parentNode.removeChild(domNode);
+                });
+            }
+        }
 
         if (parentSnippetList) {
             // return a stub for later stitching by parent
-            parentSnippetList.push(domSet);
+            parentSnippetList.push(cacheInfo[1]);
 
             return '<!--$cache$-->';
         } else {
             // top-level result
-            cacheHandler.lastRootDomSet = domSet;
+            cacheHandler.lastRootDomSet = cacheInfo[1];
 
             return '<!--$cacheRoot$-->';
         }
@@ -74,6 +111,8 @@ function cacheHandler() {
 }
 
 function render() {
+    var oldDomSet = cacheHandler.lastRootDomSet;
+
     var textOutput = Mustache.render(template, {
         clickCount: clickCount,
 
@@ -85,10 +124,12 @@ function render() {
         throw new Error('cache tag must be top-level');
     }
 
-    container.innerHTML = '';
-    cacheHandler.lastRootDomSet.forEach(function (node) {
-        container.appendChild(node);
-    });
+    if (cacheHandler.lastRootDomSet !== oldDomSet) {
+        container.innerHTML = '';
+        cacheHandler.lastRootDomSet.forEach(function (node) {
+            container.appendChild(node);
+        });
+    }
 }
 
 render();
