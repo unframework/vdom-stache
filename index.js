@@ -38,8 +38,6 @@ function cacheHandler() {
         }
 
         if (cacheInfo[0] !== html) {
-            console.log('instantiating!', currentId);
-
             // keep reference to old DOM, if any
             var oldDomSet = cacheInfo[1];
 
@@ -84,8 +82,6 @@ function cacheHandler() {
 
             // replace old DOM if we are part of the tree already
             if (oldDomSet !== null) {
-                console.log('replacing!', currentId);
-
                 domSet.forEach(function (newContentNode) {
                     oldDomSet[0].parentNode.insertBefore(newContentNode, oldDomSet[0]);
                 })
