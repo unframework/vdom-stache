@@ -15,6 +15,21 @@ var container = document.createElement('div');
 document.body.appendChild(container);
 
 var domStage = document.createElement('div');
+
+function createDOM(html) {
+    // instantiate HTML in a staging area
+    domStage.innerHTML = html;
+
+    var domSet = Array.apply(null, new Array(domStage.childNodes.length)).map(function (x, index) {
+        return domStage.childNodes[index];
+    });
+
+    // unlink staged nodes
+    domStage.innerHTML = '';
+
+    return domSet;
+}
+
 var domCache = Object.create(null);
 
 function cacheHandler() {
@@ -41,15 +56,8 @@ function cacheHandler() {
             // keep reference to old DOM, if any
             var oldDomSet = cacheInfo[1];
 
-            // instantiate resulting HTML in a staging area
-            domStage.innerHTML = html;
-
-            var domSet = Array.apply(null, new Array(domStage.childNodes.length)).map(function (x, index) {
-                return domStage.childNodes[index];
-            });
-
-            // unlink staged nodes
-            domStage.innerHTML = '';
+            // instantiate resulting HTML
+            var domSet = createDOM(html);
 
             // ensure we have at least some marker DOM
             if (domSet.length === 0) {
