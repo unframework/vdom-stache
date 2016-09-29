@@ -30,6 +30,28 @@ function createDOM(html) {
     return domSet;
 }
 
+function stitchDOM(domSet, currentSnippetList, markerCommentValue) {
+    var snippetMarkerNodeList = [];
+
+    domSet.forEach(function (domNode) {
+        var walker = document.createTreeWalker(domNode, NodeFilter.SHOW_COMMENT, {
+            acceptNode: function (node) {
+                return node.nodeValue === markerCommentValue ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+            }
+        }, false);
+
+        while(walker.nextNode()) {
+            snippetMarkerNodeList.push(walker.currentNode);
+        }
+    });
+
+    snippetMarkerNodeList.forEach(function (snippetMarkerNode, index) {
+        currentSnippetList[index].forEach(function (contentNode) {
+            snippetMarkerNode.parentNode.insertBefore(contentNode, snippetMarkerNode);
+        });
+    });
+}
+
 var domCache = Object.create(null);
 
 function cacheHandler() {
@@ -65,25 +87,7 @@ function cacheHandler() {
             }
 
             // stitch together resulting DOM by replacing child snippet markers
-            var snippetMarkerNodeList = [];
-
-            domSet.forEach(function (domNode) {
-                var walker = document.createTreeWalker(domNode, NodeFilter.SHOW_COMMENT, {
-                    acceptNode: function (node) {
-                        return node.nodeValue === '$cache$' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-                    }
-                }, false);
-
-                while(walker.nextNode()) {
-                    snippetMarkerNodeList.push(walker.currentNode);
-                }
-            });
-
-            snippetMarkerNodeList.forEach(function (snippetMarkerNode, index) {
-                currentSnippetList[index].forEach(function (contentNode) {
-                    snippetMarkerNode.parentNode.insertBefore(contentNode, snippetMarkerNode);
-                });
-            });
+            stitchDOM(domSet, currentSnippetList, '$cache$');
 
             cacheInfo[0] = html;
             cacheInfo[1] = domSet;
